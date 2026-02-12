@@ -1,0 +1,6 @@
+fastapi==0.128.0
+uvicorn==0.40.0
+pydantic==2.12.5
+openai==2.15.0
+pydantic_settings==2.12.0
+yandex_cloud_ml_sdk==0.17.1

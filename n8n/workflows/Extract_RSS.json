@@ -1,0 +1,891 @@
+{
+  "name": "Extract_RSS",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"links\":[\"https://example.com/1\"]\n}"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2400,
+        -60
+      ],
+      "id": "1167e8b2-75ed-4bad-ab58-3d082c123f0d",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.links }}",
+        "options": {
+          "ignoreSSL": false
+        }
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        -1760,
+        0
+      ],
+      "id": "e7bf52dd-a8ff-4a6b-a219-7176455892a0",
+      "name": "RSS Read",
+      "executeOnce": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst item = items[0].json;\n\n\nreturn item\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1260,
+        -20
+      ],
+      "id": "4208211d-33c3-4d22-92c4-b171381388a5",
+      "name": "Pick_last_published_news_item"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $items();\n\nconst successItems = items.filter(\n  item => item.json.title != null\n);\n\nconst allFailed = successItems.length === 0;\n\n// если все упали — отдаем один сигнальный item\nif (allFailed) {\n  return [\n    {\n      json: {\n        res: 'all_failed'\n      }\n    }\n  ];\n}\n\n// иначе возвращаем ТОЛЬКО успешные items\nreturn successItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1740,
+        -220
+      ],
+      "id": "5b250152-c9e4-4053-b024-9d9838178f31",
+      "name": "Filter_error_news"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a5e9e8bc-5e26-4a6c-9b30-c2f9b3bd6e36",
+              "leftValue": "={{ $json.res }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1540,
+        -220
+      ],
+      "id": "84c03087-a75e-4ab5-a477-b40df28d79f2",
+      "name": "Are_all_rss_failed?"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"status\": \"error\",\n  \"data\": null,\n\"error_message\":\"rss_not_available\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1300,
+        -380
+      ],
+      "id": "ea4c7698-145d-47fb-bf8f-03277f48c1ca",
+      "name": "Return_alert_RSS_are_not_available"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"status\": \"no_data_found\",\n  \"data\": null,\n  \"error_message\":null\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -820,
+        -340
+      ],
+      "id": "c0e1e9e6-61c3-4146-ae6e-94a5339774ce",
+      "name": "Return_alert_no_data_found"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $items();\n\n// 2. Функция валидации\nfunction isValid(item) {\n  const { title, pubDate, link } = item.json;\n\n  return [title, pubDate, link].every(\n    v => v !== undefined && v !== null && String(v).trim() !== ''\n  );\n}\n\n// 3. Фильтруем валидные\nconst validItems = items.filter(isValid);\n\n// 4. Если валидных не осталось — это ошибка\nif (validItems.length === 0) {\n  return {error: \"data_spoilt\"};\n}\n\n// 5. Возвращаем только валидные\nreturn validItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1500,
+        -60
+      ],
+      "id": "59687964-fc85-4b46-8766-8ec089a278fa",
+      "name": "Filter_spoilt_data",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $items();\n\n// 2. Функция фильтрации\nfunction isValid(item) {\n  const { published_at, filter_date } = item.json;\n\n  const publishedDate = new Date(published_at);\n  const filterDate = new Date(filter_date);\n\n   return publishedDate > filterDate;;\n}\n\n// 3. Фильтруем items\nconst validItems = items.filter(isValid);\n\n// 4. Если валидных не осталось — это ошибка\nif (validItems.length === 0) {\n  return {error: \"no_data_found\"};\n}\n\n// 5. Возвращаем только валидные\nreturn validItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1260,
+        -180
+      ],
+      "id": "b0d7b306-baa6-4cd7-bca8-814e4bf1b9ec",
+      "name": "Filter_old_news"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63df8e99-6094-42ac-8c9d-9e2ea3147c12",
+              "name": "published_at",
+              "value": "={{\n  (() => {\n    const v = $json.pubDate || $json.isoDate;\n    if (!v) return null;\n\n    let dt;\n\n    if (typeof v === 'number') {\n      dt = v > 1e12\n        ? DateTime.fromMillis(v)\n        : DateTime.fromSeconds(v);\n    } else {\n      dt = DateTime.fromISO(v);\n      if (!dt.isValid) {\n        dt = DateTime.fromRFC2822(v);\n      }\n    }\n\n    return dt.isValid\n      ? dt.setZone('Europe/Moscow').toISO()\n      : null;\n  })()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "2313887e-9a04-4a0b-8778-d00dc6847047",
+              "name": "filter_date",
+              "value": "={{ \n  DateTime\n    .now()\n    .setZone('Europe/Moscow')\n    .minus({ days: 1 })\n    .startOf('day')\n    .toISO()\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "selected",
+        "includeFields": "title, link, error",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1120,
+        120
+      ],
+      "id": "e1875122-55c6-4752-b377-dae98d6edbef",
+      "name": "Add_filter_date"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "03c9e029-1f67-4578-961b-823fbe0919f1",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1040,
+        -180
+      ],
+      "id": "0494292e-706e-4f25-af34-ba1dd6c95742",
+      "name": "Are_all_news_old?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1960,
+        -60
+      ],
+      "id": "f2d4fec6-9341-4a1c-bf06-ac3f68de0b3b",
+      "name": "Loop_Over_RSS_links"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "links",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -2200,
+        -60
+      ],
+      "id": "81f257c7-fe15-41e9-af4d-ada5b820ea1d",
+      "name": "Prepare_RSS_links_for_loop"
+    },
+    {
+      "parameters": {
+        "url": "=https://r.jina.ai/http://{{ $json.link.replace('https://','').replace('http://','') }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "b7a26231-acb4-40b6-99fc-04902bdcc152",
+      "name": "Extract_raw_article",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -320,
+        -80
+      ],
+      "retryOnFail": false,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "587c63bc-e77b-453c-a4c6-2ffb46927d45",
+              "name": "=raw_content",
+              "value": "={{ $json.data.match(/(?:Content|Markdown Content|HTML Content):\\s*([\\s\\S]*)/)?.[1] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        0
+      ],
+      "id": "b6e75b71-b756-43d5-8875-8aeb1036f78e",
+      "name": "Extract_raw_content"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $json.raw_content;\n\n// 1. Remove fenced code blocks ``` ```\ntext = text.replace(/```[\\s\\S]*?```/g, '');\n\n// 2. Remove inline code `code`\ntext = text.replace(/`[^`]*`/g, '');\n\n// 3. Remove markdown images ![alt](url)\ntext = text.replace(/!\\[[^\\]]*\\]\\([^)]*\\)/g, '');\n\n// 4. Remove markdown links [text](url) — полностью\ntext = text.replace(/\\[[^\\]]*\\]\\([^)]*\\)/g, '');\n\n// 5. Remove HTML tags\ntext = text.replace(/<[^>]+>/g, '');\n\n// 6. Decode basic HTML entities (минимально)\ntext = text\n  .replace(/&nbsp;/gi, ' ')\n  .replace(/&amp;/gi, '&')\n  .replace(/&lt;/gi, '<')\n  .replace(/&gt;/gi, '>');\n\n// 7. Remove standalone URLs\ntext = text.replace(/https?:\\/\\/\\S+/gi, '');\n\nreturn [\n  {\n    json: {\n      text_stripped: text\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        20
+      ],
+      "id": "b40c2ea1-3722-4bf4-a1d3-eeae0d66e0a0",
+      "name": "Strip_non_text_artefacts"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $json.text_stripped;\n\n// 1. Normalize line breaks (CRLF, CR → LF)\ntext = text.replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n');\n\n// 2. Replace tabs with spaces\ntext = text.replace(/\\t/g, ' ');\n\n// 3. Trim spaces at line start/end\ntext = text\n  .split('\\n')\n  .map(line => line.trim())\n  .join('\\n');\n\n// 4. Collapse multiple empty lines into max 2\ntext = text.replace(/\\n{3,}/g, '\\n\\n');\n\n// 5. Collapse multiple spaces inside lines\ntext = text.replace(/ {2,}/g, ' ');\n\n// 6. Remove lines that are only punctuation/symbols\ntext = text\n  .split('\\n')\n  .filter(line => /[a-zA-Zа-яА-Я0-9]/.test(line))\n  .join('\\n');\n\nreturn [\n  {\n    json: {\n      text_normalized: text\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        40
+      ],
+      "id": "bf418c01-f40c-42a5-a485-0890793a57ba",
+      "name": "Normolize_text"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.text_normalized;\n\n// Split by newline into lines\nconst lines = text\n  .split('\\n')\n  .map(line => line.trim())\n  .filter(line => line.length > 0);\n\nreturn [\n  {\n    json: {\n      lines\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        100
+      ],
+      "id": "0b071db0-6208-4882-a598-e592338dbb51",
+      "name": "Split_into_lines"
+    },
+    {
+      "parameters": {
+        "jsCode": "const lines = $json.lines;\n\nconst MIN_LENGTH = 25;     // символы\nconst MIN_WORDS = 5;       // слова\nconst MIN_LETTER_RATIO = 0.6;\n\nfunction isAllCaps(line) {\n  const letters = line.match(/[a-zA-Zа-яА-Я]/g);\n  if (!letters) return false;\n  return letters.every(ch => ch === ch.toUpperCase());\n}\n\nfunction isTitleCase(line) {\n  const words = line.split(' ');\n  if (words.length < 3) return false;\n\n  const capitalized = words.filter(w =>\n    /^[A-ZА-Я][a-zа-я]/.test(w)\n  );\n\n  return capitalized.length / words.length > 0.8;\n}\n\nfunction hasSentencePunctuation(line) {\n  return /[.!?…]$/.test(line);\n}\n\nfunction letterRatio(line) {\n  const letters = line.match(/[a-zA-Zа-яА-Я]/g) || [];\n  return letters.length / line.length;\n}\n\nconst good_lines = lines.filter(line => {\n  // 1. Length\n  if (line.length < MIN_LENGTH) return false;\n\n  // 2. Word count\n  const words = line.split(/\\s+/);\n  if (words.length < MIN_WORDS) return false;\n\n  // 3. Sentence punctuation\n  if (!hasSentencePunctuation(line)) return false;\n\n  // 4. Letter ratio\n  if (letterRatio(line) < MIN_LETTER_RATIO) return false;\n\n  // 5. Heading-like lines\n  if (isAllCaps(line)) return false;\n  if (isTitleCase(line)) return false;\n\n  return true;\n});\n\nreturn [\n  {\n    json: {\n      good_lines\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        180
+      ],
+      "id": "480f2fff-195c-4fd3-83b1-96882051fb51",
+      "name": "Filter_noisy_lines"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "821b2d53-db84-402f-bf97-a3f0dfcc8bcd",
+              "name": "title",
+              "value": "={{ $('Set_news_item').item.json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "d9f4c4a8-d40a-4f41-958d-9a391b38be9e",
+              "name": "description",
+              "value": "={{\n  $json.good_lines\n    .join('\\n\\n')\n    .replace(/ {2,}/g, ' ')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "a613dde6-a4ca-4989-ab67-f8517c55152e",
+              "name": "link",
+              "value": "={{ $('Set_news_item').item.json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "e6e23025-df98-4542-8cc9-f19370a561d4",
+              "name": "published_at",
+              "value": "={{ $('Set_news_item').item.json.published_at }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        780,
+        260
+      ],
+      "id": "f48ffaf0-49d5-45bc-8d69-d983f9359028",
+      "name": "Reassemble_text"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -480,
+        -80
+      ],
+      "id": "4982db3e-bf7d-488b-8bf9-efa807525c7e",
+      "name": "Set_news_item"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        920,
+        340
+      ],
+      "id": "cb7459bf-0f93-4d80-af83-6c10d4cbe1e6",
+      "name": "Wait",
+      "webhookId": "2ad3b000-2e4e-4467-a6a9-294aa1d33959"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -660,
+        -160
+      ],
+      "id": "7b4e2c43-2f06-4ef6-9b38-5c39d3fba4f6",
+      "name": "Loop_Over_News_Items"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cd2fbc4d-6d52-4f75-9530-226cf375414a",
+              "leftValue": "={{$json.error}}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -140,
+        -80
+      ],
+      "id": "8b64d635-8d09-4080-b54b-ab04629fa3b8",
+      "name": "Is_extraction_successful?"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        20,
+        200
+      ],
+      "id": "a5362f5c-f3b6-4937-85ce-b9750c1bc184",
+      "name": "Wait1",
+      "webhookId": "9972f108-0967-405c-934b-d942134f995d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $items();\n\nconst successItems = items.filter(\n  item => item.json.title != null\n);\n\nconst allFailed = successItems.length === 0;\n\n// если все упали — отдаем один сигнальный item\nif (allFailed) {\n  return [\n    {\n      json: {\n        res: 'all_failed'\n      }\n    }\n  ];\n}\n\n// иначе возвращаем ТОЛЬКО успешные items\nreturn successItems;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        -300
+      ],
+      "id": "5a026e80-65a9-4b36-9437-417d61bb7643",
+      "name": "Filter_error_news_with_content"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a5e9e8bc-5e26-4a6c-9b30-c2f9b3bd6e36",
+              "leftValue": "={{ $json.res }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -100,
+        -300
+      ],
+      "id": "e3b60cbd-4278-44f7-bfec-69277910d536",
+      "name": "Are_all_news_without_content?"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"status\": \"error\",\n  \"data\": null,\n\"error_message\":\"jina.ai_not_available\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        200,
+        -420
+      ],
+      "id": "cf9f3e76-17c4-41a2-8b90-e6e2af366991",
+      "name": "Return_alert_jina.ai_not_available"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\n\nreturn [\n  {\n    json: {\n      status: \"success\",\n      data: items,\n      error_message: null\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -200
+      ],
+      "id": "7a42451f-8826-418a-b561-812a5bc9049c",
+      "name": "Return_reliable_news_list"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Prepare_RSS_links_for_loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Filter_spoilt_data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add_filter_date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick_last_published_news_item": {
+      "main": [
+        [
+          {
+            "node": "Add_filter_date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter_error_news": {
+      "main": [
+        [
+          {
+            "node": "Are_all_rss_failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are_all_rss_failed?": {
+      "main": [
+        [
+          {
+            "node": "Return_alert_RSS_are_not_available",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filter_old_news",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter_spoilt_data": {
+      "main": [
+        [
+          {
+            "node": "Pick_last_published_news_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter_old_news": {
+      "main": [
+        [
+          {
+            "node": "Are_all_news_old?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add_filter_date": {
+      "main": [
+        [
+          {
+            "node": "Loop_Over_RSS_links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are_all_news_old?": {
+      "main": [
+        [
+          {
+            "node": "Return_alert_no_data_found",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop_Over_News_Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop_Over_RSS_links": {
+      "main": [
+        [
+          {
+            "node": "Filter_error_news",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare_RSS_links_for_loop": {
+      "main": [
+        [
+          {
+            "node": "Loop_Over_RSS_links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract_raw_article": {
+      "main": [
+        [
+          {
+            "node": "Is_extraction_successful?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract_raw_content": {
+      "main": [
+        [
+          {
+            "node": "Strip_non_text_artefacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strip_non_text_artefacts": {
+      "main": [
+        [
+          {
+            "node": "Normolize_text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normolize_text": {
+      "main": [
+        [
+          {
+            "node": "Split_into_lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split_into_lines": {
+      "main": [
+        [
+          {
+            "node": "Filter_noisy_lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter_noisy_lines": {
+      "main": [
+        [
+          {
+            "node": "Reassemble_text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reassemble_text": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_news_item": {
+      "main": [
+        [
+          {
+            "node": "Extract_raw_article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop_Over_News_Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop_Over_News_Items": {
+      "main": [
+        [
+          {
+            "node": "Filter_error_news_with_content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set_news_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is_extraction_successful?": {
+      "main": [
+        [
+          {
+            "node": "Extract_raw_content",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Loop_Over_News_Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter_error_news_with_content": {
+      "main": [
+        [
+          {
+            "node": "Are_all_news_without_content?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Are_all_news_without_content?": {
+      "main": [
+        [
+          {
+            "node": "Return_alert_jina.ai_not_available",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return_reliable_news_list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "35dca804-ec65-4363-8b5a-96eb88b286c4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c987de7ca364149649fd5c725f2018c58632cbf89c74c2d5a405cbd6d3c6f09f"
+  },
+  "id": "BSLa4GiirV5Uxsgd",
+  "tags": []
+}

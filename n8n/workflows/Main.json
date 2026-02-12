@@ -1,0 +1,982 @@
+{
+  "name": "Main",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "abV6a7LFfysAdb8j",
+          "mode": "list",
+          "cachedResultName": "Extract_RSS"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "links": "={{ $json.links }}"
+          },
+          "matchingColumns": [
+            "links"
+          ],
+          "schema": [
+            {
+              "id": "links",
+              "displayName": "links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        -1080,
+        140
+      ],
+      "id": "18c608ee-625b-41d8-ab6b-a387fe2f7328",
+      "name": "Extract_news_from_RSS"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1540,
+        140
+      ],
+      "id": "2c44f7a0-91bb-4538-9348-f6dd53220cb6",
+      "name": "Manual_start"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={ \"categories\": [\n  {\n    \"topic\": \"Места\",\n    \"content\": \"Культовые или любопытные достопримечательности как самостоятельные объекты интереса\",\n    \"must_have\": \"Конкретная достопримечательность, Географическая привязка, Фокус на уникальности, истории или значении места\",\n    \"must_not_have\": \"\"\n  },\n  {\n    \"topic\": \"События и мероприятия\",\n    \"content\": \"Временные события, имеющие начало и конец\",\n    \"must_have\": \"Наличие времени (дата/период), Описание действия или процесса, Ограниченность во времени\",\n    \"must_not_have\": \"\"\n  },\n\n  {\n    \"topic\": \"Советы\",\n    \"content\": \"Рекомендации и инструкции для действий читателя\",\n    \"must_have\": \"Ответ на «что делать / как / когда лучше», Практическая применимость, Ориентация на пользователя\",\n    \"must_not_have\": \"\"\n  }\n]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1280,
+        320
+      ],
+      "id": "c2f9a789-290b-4fc9-88dd-8add9b6e30e8",
+      "name": "Set_topics"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1540,
+        300
+      ],
+      "id": "af045db3-d863-481f-9062-9d38dead763b",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Берём список из Set node\nconst categories = $input.first().json.categories;\n\n// Получаем \"память\" workflow (ПРАВИЛЬНЫЙ СПОСОБ)\nconst staticData = $getWorkflowStaticData('global');\n\n// Инициализация при первом запуске\nif (staticData.lastIndex === undefined) {\n  staticData.lastIndex = -1;\n}\n\n// Считаем следующий индекс по кругу\nconst nextIndex = (staticData.lastIndex + 1) % categories.length;\n\n// Сохраняем индекс для следующего запуска\nstaticData.lastIndex = nextIndex;\n\n// Возвращаем выбранный объект\nreturn [\n  {\n    json: categories[nextIndex]\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1080,
+        320
+      ],
+      "id": "9ea118ac-fcef-4ecf-8d5a-82e177ff3e9e",
+      "name": "Choose_topic"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "\n  {\n    \"links\": [\n      \"https://www.insidejapantours.com/blog/feed/\",\n      \"https://blog.japanwondertravel.com/feed\",\n      \"https://en.japantravel.com/feed/latest/en/latest.rss\",\n      \"https://livejapan.com/rss/article_latest_en.xml\",\n      \"https://wildchina.com/feed/\",\n      \"https://thesoulofseoul.net/feed/\",\n      \"https://www.honeytrek.com/feed/\",\n      \"https://www.trn-news.ru/digest/feed\",\n      \"https://www.aviasales.ru/psgr/feed\",\n      \"https://www.atorus.ru/news/rss.xml\",\n      \"https://feeds.feedburner.com/russiatrekblog\",\n      \"https://www.tourism-review.com/weekly-news.rss\",\n      \"https://travelness.com/feed\",\n      \"https://www.votpusk.ru/news.xml\",\n      \"https://www.turizm.ru/news/rss/yandex/\",\n      \"https://profi.travel/page_rss.xml\",\n      \"https://lenta.ru/rss/news/travel\",\n      \"https://www.outsideonline.com/adventure-travel/feed/\",\n      \"https://www.pommietravels.com/blog/feed/\",\n      \"https://traveldudes.com/feed/\",\n      \"https://nomadicmatt.com/feed\"\n    ]\n  }\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1300,
+        140
+      ],
+      "id": "824f2f8e-c6db-461e-86dd-e2e622e2b56f",
+      "name": "Set_RSS_items"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "CsAFGzirl6nGjAeH",
+          "mode": "list",
+          "cachedResultName": "Check_news_relevance"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "data": "={{ $json.data }}",
+            "criteria": "={{ $json.criteria }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "criteria",
+              "displayName": "criteria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        220
+      ],
+      "id": "1a8f9ed5-f9f3-49ed-8aef-8e8ff52def0f",
+      "name": "Check_news_relevance"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "da5027bf-649a-4287-a5e2-bf8381e2e486",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "relevant",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        220
+      ],
+      "id": "22d374e2-5d16-41bf-8292-e72ffb124d99",
+      "name": "Is_news_item_relevant?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        0,
+        140
+      ],
+      "id": "b6daf255-036e-417f-84a9-51f737980323",
+      "name": "Loop_Over_News"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dd7e5b4a-9c31-46cb-8212-522e64106192",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        220
+      ],
+      "id": "cd1106f3-96e3-46a8-a3f2-04376e2d92f6",
+      "name": "Is_service_failed?"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GuATYOXas1fHMNIB",
+          "mode": "list",
+          "cachedResultName": "Summarize_news_item"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $json.data.title }}",
+            "description": "={{ $json.data.description }}",
+            "link": "={{ $json.data.link }}",
+            "published_at": "={{ $json.data.published_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "published_at",
+              "displayName": "published_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        920,
+        220
+      ],
+      "id": "066ef3b2-8084-45ac-a2ab-480788cfdda8",
+      "name": "Summarize_news_item"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://tourism_gen:8000/generate",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "summary",
+              "value": "={{ $json.data.summary }}"
+            },
+            {
+              "name": "link",
+              "value": "={{ $json.data.link }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        220
+      ],
+      "id": "c6f1aaf7-c5bd-4bcf-a772-78466bf78f18",
+      "name": "Generate_post"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0ed5024c-fe67-4563-a36c-cdf66d87ae24",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "012b9470-b9c3-4337-8a7d-c1ebe07d15f6",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "poor_data",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1140,
+        220
+      ],
+      "id": "51ea60c5-4b8a-408f-96e8-5d4a7d7fa8a4",
+      "name": "Is_summarization_failed?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f44e57ab-07a5-49d0-8cff-63de3cfc0065",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "b0cc7cf9-9435-4935-a158-66877fce7b6e",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "summary_too_short",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1580,
+        220
+      ],
+      "id": "75f303f2-d17b-4b6a-a165-ea6c0a3e4efb",
+      "name": "Is_generation_failed?"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "=={{  \n{\n  data: {\n    title: $json.title,\n    description: $json.description,\n    link: $json.link,\n    published_at: $json.published_at\n  },\n  criteria: {\n    topic: $json.topic,\n    content: $json.content,\n    must_have: $json.must_have,\n    must_not_have: $json.must_not_have\n  }\n}\n\n}}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -220,
+        220
+      ],
+      "id": "7a7785e7-b3f0-4166-8080-9d4845cf45ea",
+      "name": "Prepare_data_for_loop_3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -420,
+        220
+      ],
+      "id": "dd2bdcf1-8ad2-415a-bb61-6d6526451c12",
+      "name": "Prepare_data_for_loop_2"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        140
+      ],
+      "id": "7268f241-7ac9-462d-9679-410ead931b72",
+      "name": "Prepare_data_for_loop_1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f5cf0816-b748-41b3-99b2-8fb0b308baf4",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "error",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "76df7c7a-6202-410a-a8a3-2b603704adc4",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "no_data_found",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -860,
+        140
+      ],
+      "id": "dca2933f-5f6b-4769-918f-21505d986aff",
+      "name": "Is_extraction_failed?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8d46f7dc-1367-449e-a4e6-b88024a9d0a4",
+              "name": "status",
+              "value": "all_news_are_not_relevant",
+              "type": "string"
+            },
+            {
+              "id": "ee4d534e-762e-44ba-bbd2-bef59ea8c9a6",
+              "name": "error_message",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "id": "03be025f-57a1-44b2-bdaa-3a305b9fde3a",
+      "name": "Set_loop_result"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\"text\":\n\"{{\n\n({\n    rss_not_available: \"\\u{26A0}\\u{FE0F} Ошибка при обращении к RSS лентам\",\n    \"jina.ai_not_available\": \"\\u{26A0}\\u{FE0F} Ошибка при обращении к jina.ai\",\n    llm_not_available: \"\\u{26A0}\\u{FE0F} open ai не доступен\",\n    openai_timeout_over: \"\\u{26A0}\\u{FE0F} При генерации поста и изображения время ожидания ответа open ai превышено: 2 минуты на пост и 10 минут на изображение\",\n    image_generation_failed: \"\\u{26A0}\\u{FE0F} Изображение сгенерировано некорректно\"\n  })[$json.error_message] \n\n|| \n\n({\n    no_data_found: \"\\u{26A0}\\u{FE0F} Нет извлеченных новостей из RSS лент\",\n    all_news_are_not_relevant: \"\\u{26A0}\\u{FE0F} Все извлеченные новости не соответствуют требованиям: или не реленванты, или описания слишком короткие\",\n    poor_data: \"\\u{26A0}\\u{FE0F} Недостаточно объема новости для выделения фактов\",\n    summary_too_short: \"\\u{26A0}\\u{FE0F} В новости выделено меньше 3-х фактов\"\n  })[$json.status] \n\n|| \"Неизвестная ошибка при выполнении процесса\"\n}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        20
+      ],
+      "id": "ff9bfcd7-3f4f-411a-b290-9fa3f83a2d9d",
+      "name": "Prepare_alert_message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// items — все входные items от веток\n// по логике здесь должен быть ровно 1 item\nconst items = $input.all();\nconst item = items[0].json;\n\n// возвращаем только то, что тебе нужно\nreturn [\n  {\n    json: {\n      status: item.status,\n      error_message: item.error_message,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        20
+      ],
+      "id": "0b14a1d7-3b00-4921-a8cf-be7479a50970",
+      "name": "Collect_termination_reason"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TG_CHAT_ID}}",
+        "text": "={{$json.text}}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2220,
+        20
+      ],
+      "id": "641d9e03-28b9-423c-b5be-fb576ca00de9",
+      "name": "Send_alert_message",
+      "webhookId": "f9d02d92-a8dd-47fe-9870-10eec642c50a",
+      "credentials": {
+        "telegramApi": {
+          "id": "TzDIWNI0uVao4ciO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data.image_base64",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1780,
+        200
+      ],
+      "id": "dc470c30-9daf-4552-b10e-9c656e5075ba",
+      "name": "Convert_image_to_file"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1960,
+        320
+      ],
+      "id": "82b6ea28-a326-4ba7-942a-4eab25f04665",
+      "name": "Prepare_photo_and_text_for_post"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "{{$env.TG_CHAT_ID}}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "={{ $json.data.text }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2180,
+        320
+      ],
+      "id": "fb7fbaec-ead7-48a8-9109-6b7cb49f9e10",
+      "name": "Send_post",
+      "webhookId": "14f582ea-fd37-4666-b629-8cba4b6904e0",
+      "credentials": {
+        "telegramApi": {
+          "id": "TzDIWNI0uVao4ciO",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual_start": {
+      "main": [
+        [
+          {
+            "node": "Set_topics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set_RSS_items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_topics": {
+      "main": [
+        [
+          {
+            "node": "Choose_topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set_topics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set_RSS_items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract_news_from_RSS": {
+      "main": [
+        [
+          {
+            "node": "Is_extraction_failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_RSS_items": {
+      "main": [
+        [
+          {
+            "node": "Extract_news_from_RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check_news_relevance": {
+      "main": [
+        [
+          {
+            "node": "Is_service_failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is_news_item_relevant?": {
+      "main": [
+        [
+          {
+            "node": "Summarize_news_item",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop_Over_News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose_topic": {
+      "main": [
+        [
+          {
+            "node": "Prepare_data_for_loop_2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Loop_Over_News": {
+      "main": [
+        [
+          {
+            "node": "Set_loop_result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check_news_relevance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is_service_failed?": {
+      "main": [
+        [
+          {
+            "node": "Collect_termination_reason",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is_news_item_relevant?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize_news_item": {
+      "main": [
+        [
+          {
+            "node": "Is_summarization_failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate_post": {
+      "main": [
+        [
+          {
+            "node": "Is_generation_failed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is_summarization_failed?": {
+      "main": [
+        [
+          {
+            "node": "Collect_termination_reason",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate_post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is_generation_failed?": {
+      "main": [
+        [
+          {
+            "node": "Collect_termination_reason",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Convert_image_to_file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare_photo_and_text_for_post",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Prepare_data_for_loop_3": {
+      "main": [
+        [
+          {
+            "node": "Loop_Over_News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare_data_for_loop_2": {
+      "main": [
+        [
+          {
+            "node": "Prepare_data_for_loop_3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare_data_for_loop_1": {
+      "main": [
+        [
+          {
+            "node": "Prepare_data_for_loop_2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is_extraction_failed?": {
+      "main": [
+        [
+          {
+            "node": "Collect_termination_reason",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare_data_for_loop_1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set_loop_result": {
+      "main": [
+        [
+          {
+            "node": "Collect_termination_reason",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare_alert_message": {
+      "main": [
+        [
+          {
+            "node": "Send_alert_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect_termination_reason": {
+      "main": [
+        [
+          {
+            "node": "Prepare_alert_message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert_image_to_file": {
+      "main": [
+        [
+          {
+            "node": "Prepare_photo_and_text_for_post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare_photo_and_text_for_post": {
+      "main": [
+        [
+          {
+            "node": "Send_post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "57a1c291-4f81-41f2-8679-167e3a1f1390",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0d22757c71a049a943e8eddc13d01178cccb7f706327002fb092133f45b197d8"
+  },
+  "id": "KFdsWeAQDCn5wvOo",
+  "tags": []
+}

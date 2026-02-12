@@ -1,0 +1,41 @@
+services:
+  n8n:
+    image: n8nio/n8n:1.97.1
+    user: "1000:1000"
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-secret}
+
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_SECURE_COOKIE=false
+
+      - NODE_ENV=production
+      - TZ=Europe/Moscow
+      - GENERIC_TIMEZONE=Europe/Moscow
+
+      - TG_CHAT_ID=${TG_CHAT_ID}
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - tourism_gen
+
+  tourism_gen:
+    build: ./tourism_gen
+    image: tourism_gen:latest
+    environment:
+      OPENAI_KEY: ${OPENAI_KEY}
+      FOLDER_ID: ${FOLDER_ID}
+      YC_API_KEY: ${YC_API_KEY}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+    ports:
+       - "8000:8000"
+
+volumes:
+  n8n_data:
