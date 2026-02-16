@@ -66,6 +66,7 @@
 - OpenAI API
 - Telegram API
 - Yandex Art API
+- Парсер jina.ai
 
 ## Быстрый запуск
 
